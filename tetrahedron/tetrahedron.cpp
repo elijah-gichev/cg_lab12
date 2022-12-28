@@ -6,8 +6,7 @@
 #include <iostream>
 
 
-// Переменные с индентификаторами ID
-// ID шейдерной программы
+
 GLuint Program;
 // ID атрибута вершин
 GLint Attrib_vertex;
@@ -18,7 +17,7 @@ GLint Attrib_color;
 GLuint VBO_position;
 // ID VBO цвета
 GLuint VBO_color;
-GLuint VBO;
+
 GLint Unif_shift;
 // Вершина
 struct Vertex
@@ -76,24 +75,24 @@ const char* FragShaderSource = R"(
     }
 )";
 
-void shift_change(float x, float y)
-{
-    shift[0] += x;
-    shift[1] += y;
-}
+
 
 void Init();
 void Draw();
 void Release();
+void shift_change(float x, float y);
+void checkOpenGLerror();
+void ShaderLog(unsigned int shader);
+
+const float onTapOffset = 0.01;
 
 
 int main() {
-    sf::Window window(sf::VideoMode(800, 800), "My OpenGL window", sf::Style::Default, sf::ContextSettings(24));
+    sf::Window window(sf::VideoMode(800, 800), "Tetrahedron", sf::Style::Default, sf::ContextSettings(24));
     window.setVerticalSyncEnabled(true);
 
     window.setActive(true);
 
-    // Инициализация glew
     glewInit();
 
     Init();
@@ -107,15 +106,12 @@ int main() {
             else if (event.type == sf::Event::Resized) {
                 glViewport(0, 0, event.size.width, event.size.height);
             }
-            // обработка нажатий клавиш
             else if (event.type == sf::Event::KeyPressed) {
                 switch (event.key.code) {
-                case (sf::Keyboard::Right): shift_change(0.01, 0); break;
-                case (sf::Keyboard::Left): shift_change(-0.01, 0); break;
-                case (sf::Keyboard::Up): shift_change(0, 0.01); break;
-                case (sf::Keyboard::Down): shift_change(0, -0.01); break;
-                //case (sf::Keyboard::PageUp): shift[2] += 0.01; break;
-                //case (sf::Keyboard::PageDown): shift[2] -= 0.01; break;
+                case (sf::Keyboard::Right): shift_change(onTapOffset, 0); break;
+                case (sf::Keyboard::Left): shift_change(-onTapOffset, 0); break;
+                case (sf::Keyboard::Up): shift_change(0, onTapOffset); break;
+                case (sf::Keyboard::Down): shift_change(0, -onTapOffset); break;
                 default: break;
                 }
             }
@@ -133,40 +129,10 @@ int main() {
 }
 
 
-// Проверка ошибок OpenGL, если есть то вывод в консоль тип ошибки
-void checkOpenGLerror() {
-    GLenum errCode;
-    // Коды ошибок можно смотреть тут
-    // https://www.khronos.org/opengl/wiki/OpenGL_Error
-    if ((errCode = glGetError()) != GL_NO_ERROR)
-        std::cout << "OpenGl error!: " << errCode << std::endl;
-}
-
-// Функция печати лога шейдера
-void ShaderLog(unsigned int shader)
-{
-    int infologLen = 0;
-    int charsWritten = 0;
-    char* infoLog;
-    glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infologLen);
-    if (infologLen > 1)
-    {
-        infoLog = new char[infologLen];
-        if (infoLog == NULL)
-        {
-            std::cout << "ERROR: Could not allocate InfoLog buffer" << std::endl;
-            exit(1);
-        }
-        glGetShaderInfoLog(shader, infologLen, &charsWritten, infoLog);
-        std::cout << "InfoLog: " << infoLog << "\n\n\n";
-        delete[] infoLog;
-    }
-}
 
 
 void InitVBO()
 {
-    glGenBuffers(1, &VBO);
     glGenBuffers(1, &VBO_position);
     glGenBuffers(1, &VBO_color);
 
@@ -178,19 +144,17 @@ void InitVBO()
         {-0.3f,-0.3f,+0.3f }, {-0.3f,+0.2f,-0.1f}, {+0.7f,-0.3f,-0.15f }
     };
 
-    // Цвет треугольника
     float colors[12][4] =
     {
         {0.0, 0.0, 1.0, 0.0 }, {1.0, 1.0, 1.0, 1.0 }, {1.0, 0.0, 0.0, 1.0 },
-        {0.0, 0.0, 1.0, 0.0 }, {1.0, 1.0, 1.0, 1.0 }, {0.0, 1.0, 0.0, 1.0  },
+        {0.0, 0.0, 1.0, 0.0 }, {1.0, 1.0, 1.0, 1.0 }, {0.0, 1.0, 0.0, 1.0 },
         {0.0, 1.0, 0.0, 1.0 }, {1.0, 1.0, 1.0, 1.0 }, {1.0, 0.0, 0.0, 1.0 },
         {0.5, 0.5, 0.5, 1.0 }, {0.0, 1.0, 0.0, 1.0 }, {1.0, 0.0, 0.0, 1.0 },
     };
 
-    // Передаем вершины в буфер
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO_position);
     glBufferData(GL_ARRAY_BUFFER, sizeof(triangle), triangle, GL_STATIC_DRAW);
+
     glBindBuffer(GL_ARRAY_BUFFER, VBO_color);
     glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW);
     checkOpenGLerror();
@@ -200,18 +164,14 @@ void InitVBO()
 void InitShader() {
     // Создаем вершинный шейдер
     GLuint vShader = glCreateShader(GL_VERTEX_SHADER);
-    // Передаем исходный код
     glShaderSource(vShader, 1, &VertexShaderSource, NULL);
-    // Компилируем шейдер
     glCompileShader(vShader);
     std::cout << "vertex shader \n";
     ShaderLog(vShader);
 
     // Создаем фрагментный шейдер
     GLuint fShader = glCreateShader(GL_FRAGMENT_SHADER);
-    // Передаем исходный код
     glShaderSource(fShader, 1, &FragShaderSource, NULL);
-    // Компилируем шейдер
     glCompileShader(fShader);
     std::cout << "fragment shader \n";
     ShaderLog(fShader);
@@ -223,7 +183,6 @@ void InitShader() {
 
     // Линкуем шейдерную программу
     glLinkProgram(Program);
-    // Проверяем статус сборки
     int link_ok;
     glGetProgramiv(Program, GL_LINK_STATUS, &link_ok);
     if (!link_ok)
@@ -272,16 +231,15 @@ void Draw() {
     glEnableVertexAttribArray(Attrib_color);
     glEnable(GL_DEPTH_TEST);
 
-    // Подключаем VBO_position
+    // VBO_position
     glBindBuffer(GL_ARRAY_BUFFER, VBO_position);
     glVertexAttribPointer(Attrib_vertex, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    // Подключаем VBO
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
-    // Подключаем VBO_color
+    // VBO_color
     glBindBuffer(GL_ARRAY_BUFFER, VBO_color);
     glVertexAttribPointer(Attrib_color, 4, GL_FLOAT, GL_FALSE, 0, 0);
 
+    // передаем сдвиг через uniform
     glUniform3fv(Unif_shift, 1, shift);
 
     // Отключаем VBO
@@ -301,9 +259,7 @@ void Draw() {
 
 // Освобождение шейдеров
 void ReleaseShader() {
-    // Передавая ноль, мы отключаем шейдрную программу
     glUseProgram(0);
-    // Удаляем шейдерную программу
     glDeleteProgram(Program);
 }
 
@@ -318,4 +274,36 @@ void ReleaseVBO()
 void Release() {
     ReleaseShader();
     ReleaseVBO();
+}
+
+void shift_change(float x, float y)
+{
+    shift[0] += x;
+    shift[1] += y;
+}
+
+void checkOpenGLerror() {
+    GLenum errCode;
+    if ((errCode = glGetError()) != GL_NO_ERROR)
+        std::cout << "OpenGl error!: " << errCode << std::endl;
+}
+
+void ShaderLog(unsigned int shader)
+{
+    int infologLen = 0;
+    int charsWritten = 0;
+    char* infoLog;
+    glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infologLen);
+    if (infologLen > 1)
+    {
+        infoLog = new char[infologLen];
+        if (infoLog == NULL)
+        {
+            std::cout << "ERROR: Could not allocate InfoLog buffer" << std::endl;
+            exit(1);
+        }
+        glGetShaderInfoLog(shader, infologLen, &charsWritten, infoLog);
+        std::cout << "InfoLog: " << infoLog << "\n\n\n";
+        delete[] infoLog;
+    }
 }

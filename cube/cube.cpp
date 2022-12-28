@@ -15,6 +15,7 @@
 
 
 #include "shaders.h"
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -22,8 +23,8 @@ using namespace std;
 
 enum class ShapeType
 {
-	Cube_task2 = 0,
-	Cube_task3
+	CubeWithTextureAndColor = 0,
+	CubeWithDoubleTexture
 };
 
 
@@ -84,57 +85,26 @@ struct Vertex
 	GLfloat tex2;
 };
 
-// Функция для проверки ошибок
+
 void checkOpenGLerror();
 void ShaderLog(unsigned int shader);
-
-// Функция для загрузки шейдеров
 void InitShader();
 void LoadAttrib(GLuint prog, GLint& attrib, const char* attr_name);
 void LoadUniform(GLuint prog, GLint& attrib, const char* attr_name);
-
-// Функция для инициализации вершинного буфера
 void InitVBO();
-// Функция для инициализации ресурсов
 void InitTextures();
 void Init();
-// Функция для отрисовки
 void Draw(sf::Window& window);
-// Функция для очистки шейдеров
+void DrawCubeWithTextureAndColor();
+void DrawCubeWithDoubleTexture();
 void ReleaseShader();
-// Функция для очистки вершинного буфера
 void ReleaseVBO();
-// Функция для очистки ресурсов
 void Release();
 
 using namespace std;
 
-ShapeType shapetype = ShapeType::Cube_task2;
+ShapeType shapetype = ShapeType::CubeWithTextureAndColor;
 
-
-void ShaderLog(unsigned int shader)
-{
-	int infologLen = 0;
-	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infologLen);
-	if (infologLen > 1)
-	{
-		int charsWritten = 0;
-		std::vector<char> infoLog(infologLen);
-		glGetShaderInfoLog(shader, infologLen, &charsWritten, infoLog.data());
-		std::cout << "InfoLog: " << infoLog.data() << std::endl;
-	}
-}
-
-void checkOpenGLerror()
-{
-	GLenum errCode;
-	const GLubyte* errString;
-	if ((errCode = glGetError()) != GL_NO_ERROR)
-	{
-		errString = gluErrorString(errCode);
-		std::cout << "OpenGL error: " << errString << std::endl;
-	}
-}
 
 void Init()
 {
@@ -151,7 +121,7 @@ void Init()
 
 int main()
 {
-	sf::Window window(sf::VideoMode(600, 600), "My OpenGL window", sf::Style::Default, sf::ContextSettings(24));
+	sf::Window window(sf::VideoMode(600, 600), "Cube", sf::Style::Default, sf::ContextSettings(24));
 	window.setVerticalSyncEnabled(true);
 	window.setActive(true);
 	glewInit(); 
@@ -174,28 +144,28 @@ int main()
 			else if (event.type == sf::Event::KeyPressed)
 			{
 				// Поворот
-				if (event.key.code == sf::Keyboard::I)
+				if (event.key.code == sf::Keyboard::X)
 				{
 					matr = glm::rotate(matr, 0.1f, glm::vec3(1.0f, 0.0f, 0.0f));
 				}
-				else if (event.key.code == sf::Keyboard::O)
+				else if (event.key.code == sf::Keyboard::Y)
 				{
 					matr = glm::rotate(matr, 0.1f, glm::vec3(0.0f, 1.0f, 0.0f));
 				}
-				else if (event.key.code == sf::Keyboard::P)
+				else if (event.key.code == sf::Keyboard::Z)
 				{
 					matr = glm::rotate(matr, 0.1f, glm::vec3(0.0f, 0.0f, 1.0f));
 				}
 
 				// Смешивание
-				else if (event.key.code == sf::Keyboard::F3)
+				else if (event.key.code == sf::Keyboard::Add)
 				{
 					if (mix_value < 1.0f)
 					{
 						mix_value += 0.1f;
 					}
 				}
-				else if (event.key.code == sf::Keyboard::F4)
+				else if (event.key.code == sf::Keyboard::Subtract)
 				{
 					if (mix_value > 0.1f)
 					{
@@ -204,7 +174,7 @@ int main()
 				}
 
 				// К изначальному
-				else if (event.key.code == sf::Keyboard::F10)
+				else if (event.key.code == sf::Keyboard::Num0)
 				{
 					matr = glm::mat4(1.0f);
 				}
@@ -212,11 +182,11 @@ int main()
 				// Выбор задания
 				else if (event.key.code == sf::Keyboard::Num1)
 				{
-					shapetype = ShapeType::Cube_task2;
+					shapetype = ShapeType::CubeWithTextureAndColor;
 				}
 				else if (event.key.code == sf::Keyboard::Num2)
 				{
-					shapetype = ShapeType::Cube_task3;
+					shapetype = ShapeType::CubeWithDoubleTexture;
 				}
 
 			}
@@ -235,14 +205,19 @@ void InitVBO()
 	{
 		{0.0f, 0.0f, 0.0f, red, 1.0f, 0.0f}, {0.0f, 1.0f, 1.0f, green, 1.0f, 0.0f}, {1.0f, 0.0f, 1.0f, blue, 1.0f, 0.0f},
 		{0.0f, 0.0f, 0.0f, red, 1.0f, 0.0f}, {0.0f, 1.0f, 1.0f, green, 1.0f, 0.0f}, {1.0f, 1.0f, 0.0f, white, 1.0f, 0.0f},
+
 		{0.0f, 0.0f, 0.0f, red, 1.0f, 0.0f}, {1.0f, 1.0f, 0.0f, white, 1.0f, 0.0f}, {1.0f, 0.0f, 1.0f, blue, 1.0f, 0.0f},
 		{1.0f, 1.0f, 0.0f, white, 1.0f, 0.0f}, {1.0f, 0.0f, 1.0f, blue, 1.0f, 0.0f}, {0.0f, 1.0f, 1.0f, green, 1.0f, 0.0f},
+
 		{1.0f, 1.0f, -1.0f, red, 1.0f, 0.0f}, {-1.0f, 1.0f, -1.0f, blue, 0.0f, 0.0f}, {-1.0f, 1.0f, 1.0f, green, 0.0f, 1.0f},
 		{1.0f, 1.0f, 1.0f, white, 1.0f, 1.0f},	{1.0f, -1.0f, 1.0f, blue, 1.0f, 0.0f}, {-1.0f, -1.0f, 1.0f, red, 0.0f, 0.0f}, 
+
 		{-1.0f, -1.0f, -1.0f, white, 0.0f, 1.0f}, {1.0f, -1.0f, -1.0f, green, 1.0f,1.0f}, {1.0f, 1.0f, 1.0f, white, 1.0f, 0.0f}, 
 		{-1.0f, 1.0f, 1.0f, green, 0.0f, 0.0f}, {-1.0f, -1.0f, 1.0f, red, 0.0f, 1.0f}, {1.0f, -1.0f, 1.0f, blue, 1.0f, 1.0f}, 
+
 		{1.0f, -1.0f, -1.0f, green, 0.0f, 1.0f}, {-1.0f, -1.0f, -1.0f, white, 1.0f, 1.0f}, {-1.0f, 1.0f, -1.0f, blue, 1.0f, 0.0f},
 		{1.0f, 1.0f, -1.0f, red, 0.0f, 0.0f}, {-1.0f, 1.0f, 1.0f, green, 1.0f, 0.0f}, {-1.0f, 1.0f, -1.0f, blue, 0.0f, 0.0f},
+
 		{-1.0f, -1.0f, -1.0f, white, 0.0f, 1.0f}, {-1.0f, -1.0f, 1.0f, red, 1.0f, 1.0f}, {1.0f, 1.0f, -1.0f, red, 1.0f, 0.0f},
 		{1.0f, 1.0f, 1.0f, white, 0.0f, 0.0f}, {1.0f, -1.0f, 1.0f, green, 0.0f, 1.0f}, {1.0f, -1.0f, -1.0f, blue, 1.0f, 1.0f},
 	};
@@ -263,7 +238,7 @@ void InitTextures()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	int width, height, channels;
-	unsigned char* data = stbi_load("image.jpg", &width, &height, &channels, 0);
+	unsigned char* data = stbi_load("texture1.jpg", &width, &height, &channels, 0);
 	if (data)
 	{
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
@@ -282,7 +257,7 @@ void InitTextures()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	data = stbi_load("inage.jpg", &width, &height, &channels, 0);
+	data = stbi_load("texture2.jpg", &width, &height, &channels, 0);
 	if (data)
 	{
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
@@ -388,45 +363,13 @@ void Draw(sf::Window& window)
 {
 	switch (shapetype)
 	{
-		case ShapeType::Cube_task2:
-			window.setTitle("Cube task 2");
-			glUseProgram(Task2);
-			glUniformMatrix4fv(A2_affine, 1, GL_FALSE, glm::value_ptr(matr));
-			glUniformMatrix4fv(A2_proj, 1, GL_FALSE, glm::value_ptr(proj));
-			glUniform1f(A2_mix_value, mix_value);
-			glUniform1i(glGetUniformLocation(Task2, "Texture"), 0);
-			glEnableVertexAttribArray(A2_vertex);
-			glEnableVertexAttribArray(A2_color);
-			glEnableVertexAttribArray(A2_texCoord);
-			glBindBuffer(GL_ARRAY_BUFFER, VBO);
-			glVertexAttribPointer(A2_vertex, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(GLfloat), (GLvoid*)0);
-			glVertexAttribPointer(A2_color, 4, GL_FLOAT, GL_FALSE, 9 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
-			glVertexAttribPointer(A2_texCoord, 2, GL_FLOAT, GL_FALSE, 9 * sizeof(GLfloat), (GLvoid*)(7 * sizeof(GLfloat)));
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
-			glDrawArrays(GL_QUADS, 12, 24);
-			glDisableVertexAttribArray(A2_vertex);
-			glDisableVertexAttribArray(A2_color);
-			glDisableVertexAttribArray(A2_texCoord);
-			glUseProgram(0);
+		case ShapeType::CubeWithTextureAndColor:
+			window.setTitle("CubeWithTextureAndColor");
+			DrawCubeWithTextureAndColor();
 			break;		
-		case ShapeType::Cube_task3:
-			window.setTitle("Cube task 3");
-			glUseProgram(Task3);
-			glUniformMatrix4fv(A3_affine, 1, GL_FALSE, glm::value_ptr(matr));
-			glUniformMatrix4fv(A3_proj, 1, GL_FALSE, glm::value_ptr(proj));
-			glUniform1f(A3_mix_value, mix_value);
-			glUniform1i(glGetUniformLocation(Task3, "Texture1"), 0);
-			glUniform1i(glGetUniformLocation(Task3, "Texture2"), 1);
-			glEnableVertexAttribArray(A3_vertex);
-			glEnableVertexAttribArray(A3_texCoord);
-			glBindBuffer(GL_ARRAY_BUFFER, VBO);
-			glVertexAttribPointer(A3_vertex, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(GLfloat), (GLvoid*)0);
-			glVertexAttribPointer(A3_texCoord, 2, GL_FLOAT, GL_FALSE, 9 * sizeof(GLfloat), (GLvoid*)(7 * sizeof(GLfloat)));
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
-			glDrawArrays(GL_QUADS, 12, 24);
-			glDisableVertexAttribArray(A3_vertex);
-			glDisableVertexAttribArray(A3_texCoord);
-			glUseProgram(0);
+		case ShapeType::CubeWithDoubleTexture:
+			window.setTitle("CubeWithDoubleTexture");
+			DrawCubeWithDoubleTexture();
 			break;
 		default:
 			break;
@@ -434,6 +377,48 @@ void Draw(sf::Window& window)
 
 	glUseProgram(0);
 	checkOpenGLerror();
+}
+
+void DrawCubeWithTextureAndColor()
+{
+	glUseProgram(Task2);
+	glUniformMatrix4fv(A2_affine, 1, GL_FALSE, glm::value_ptr(matr));
+	glUniformMatrix4fv(A2_proj, 1, GL_FALSE, glm::value_ptr(proj));
+	glUniform1f(A2_mix_value, mix_value);
+	glUniform1i(glGetUniformLocation(Task2, "Texture"), 0);
+	glEnableVertexAttribArray(A2_vertex);
+	glEnableVertexAttribArray(A2_color);
+	glEnableVertexAttribArray(A2_texCoord);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glVertexAttribPointer(A2_vertex, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(GLfloat), (GLvoid*)0);
+	glVertexAttribPointer(A2_color, 4, GL_FLOAT, GL_FALSE, 9 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+	glVertexAttribPointer(A2_texCoord, 2, GL_FLOAT, GL_FALSE, 9 * sizeof(GLfloat), (GLvoid*)(7 * sizeof(GLfloat)));
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glDrawArrays(GL_QUADS, 12, 24);
+	glDisableVertexAttribArray(A2_vertex);
+	glDisableVertexAttribArray(A2_color);
+	glDisableVertexAttribArray(A2_texCoord);
+	glUseProgram(0);
+}
+
+void DrawCubeWithDoubleTexture()
+{
+	glUseProgram(Task3);
+	glUniformMatrix4fv(A3_affine, 1, GL_FALSE, glm::value_ptr(matr));
+	glUniformMatrix4fv(A3_proj, 1, GL_FALSE, glm::value_ptr(proj));
+	glUniform1f(A3_mix_value, mix_value);
+	glUniform1i(glGetUniformLocation(Task3, "Texture1"), 0);
+	glUniform1i(glGetUniformLocation(Task3, "Texture2"), 1);
+	glEnableVertexAttribArray(A3_vertex);
+	glEnableVertexAttribArray(A3_texCoord);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glVertexAttribPointer(A3_vertex, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(GLfloat), (GLvoid*)0);
+	glVertexAttribPointer(A3_texCoord, 2, GL_FLOAT, GL_FALSE, 9 * sizeof(GLfloat), (GLvoid*)(7 * sizeof(GLfloat)));
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glDrawArrays(GL_QUADS, 12, 24);
+	glDisableVertexAttribArray(A3_vertex);
+	glDisableVertexAttribArray(A3_texCoord);
+	glUseProgram(0);
 }
 
 void Release()
@@ -453,4 +438,28 @@ void ReleaseShader()
 	glUseProgram(0);
 	glDeleteProgram(Task2);
 	glDeleteProgram(Task3);
+}
+
+void ShaderLog(unsigned int shader)
+{
+	int infologLen = 0;
+	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infologLen);
+	if (infologLen > 1)
+	{
+		int charsWritten = 0;
+		std::vector<char> infoLog(infologLen);
+		glGetShaderInfoLog(shader, infologLen, &charsWritten, infoLog.data());
+		std::cout << "InfoLog: " << infoLog.data() << std::endl;
+	}
+}
+
+void checkOpenGLerror()
+{
+	GLenum errCode;
+	const GLubyte* errString;
+	if ((errCode = glGetError()) != GL_NO_ERROR)
+	{
+		errString = gluErrorString(errCode);
+		std::cout << "OpenGL error: " << errString << std::endl;
+	}
 }

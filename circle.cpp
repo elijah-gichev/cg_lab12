@@ -1,6 +1,4 @@
 ﻿
-// Градиентный треугольник
-
 #include <gl/glew.h>
 #include <SFML/OpenGL.hpp>
 #include <SFML/Window.hpp>
@@ -31,7 +29,6 @@ struct Vertex
     GLfloat y;
 };
 
-// Исходный код вершинного шейдера
 const char* VertexShaderSource = R"(
     #version 330 core
     in vec2 coord;
@@ -45,7 +42,6 @@ const char* VertexShaderSource = R"(
     }
 )";
 
-// Исходный код фрагментного шейдера
 const char* FragShaderSource = R"(
     #version 330 core
     in vec4 vert_color;
@@ -57,18 +53,23 @@ const char* FragShaderSource = R"(
 )";
 
 
+const GLfloat onTapOffset = (GLfloat)0.1;
+const int triangleAmount = 54;
+
+
 void Init();
 void Draw();
 void Release();
 void InitVBO();
+void checkOpenGLerror();
+void ShaderLog(unsigned int shader);
 
 int main() {
-    sf::Window window(sf::VideoMode(600, 600), "My OpenGL window", sf::Style::Default, sf::ContextSettings(24));
+    sf::Window window(sf::VideoMode(600, 600), "Circle", sf::Style::Default, sf::ContextSettings(24));
     window.setVerticalSyncEnabled(true);
 
     window.setActive(true);
 
-    // Инициализация glew
     glewInit();
 
     Init();
@@ -90,21 +91,21 @@ int main() {
             {
                 switch (event.key.code)
                 {
-                case (sf::Keyboard::Num1):
+                case (sf::Keyboard::Right):
                     if (glfx < 1)
-                        glfx += (GLfloat)0.1; 
+                        glfx += onTapOffset;
                     break;
-                case (sf::Keyboard::Num2):
+                case (sf::Keyboard::Left):
                     if (glfx > 0)
-                        glfx -= (GLfloat)0.1; 
+                        glfx -= onTapOffset;
                     break;
-                case (sf::Keyboard::Num3): 
+                case (sf::Keyboard::Up):
                     if (glfy < 0)
-                        glfy += (GLfloat)0.1; 
+                        glfy += onTapOffset;
                     break;
-                case (sf::Keyboard::Num4): 
+                case (sf::Keyboard::Down): 
                     if (glfy > -1)
-                        glfy -= (GLfloat)0.1;
+                        glfy -= onTapOffset;
                     break;
                 default: break;
                 }
@@ -124,65 +125,40 @@ int main() {
 }
 
 
-// Проверка ошибок OpenGL, если есть то вывод в консоль тип ошибки
-void checkOpenGLerror()
-{
-    GLenum errCode;
-    // Коды ошибок можно смотреть тут
-    // https://www.khronos.org/opengl/wiki/OpenGL_Error
-    if ((errCode = glGetError()) != GL_NO_ERROR)
-        std::cout << "OpenGl error!: " << errCode << std::endl;
-}
-
-// Функция печати лога шейдера
-void ShaderLog(unsigned int shader)
-{
-    int infologLen = 0;
-    int charsWritten = 0;
-    char* infoLog;
-    glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infologLen);
-    if (infologLen > 1)
-    {
-        infoLog = new char[infologLen];
-        if (infoLog == NULL)
-        {
-            std::cout << "ERROR: Could not allocate InfoLog buffer" << std::endl;
-            exit(1);
-        }
-        glGetShaderInfoLog(shader, infologLen, &charsWritten, infoLog);
-        std::cout << "InfoLog: " << infoLog << "\n\n\n";
-        delete[] infoLog;
-    }
-}
 
 void InitVBO()
 {
     glGenBuffers(1, &VBO_position);
     glGenBuffers(1, &VBO_color);
-    int triangleAmount = 54;
-    GLfloat twicePi = 2.0f * 3.14;
-    Vertex triangle[56];
-    triangle[0] = { 0,0 };
-    for (int i = 0; i <= 54; i++) 
-    {
-        triangle[i + 1] = { 0 + (glfx * cos(i * twicePi / triangleAmount)),
-            0 + (glfy * sin(i * twicePi / triangleAmount)) };
-    }
-    triangle[55] = { 0 + (glfx * cos(0 * twicePi / triangleAmount)),
-           0 + (glfy * sin(0 * twicePi / triangleAmount)) };
 
-    float colors[56][4];
+    // построение круга
+    GLfloat twicePi = 2.0f * 3.14;
+    Vertex triangle[triangleAmount + 2];
+    triangle[0] = { 0,0 };
+    for (int i = 0; i <= triangleAmount; i++)
+    {
+        GLfloat x = glfx * cos(i * twicePi / triangleAmount);
+        GLfloat y = glfy * sin(i * twicePi / triangleAmount);
+        triangle[i + 1] = { x, y };
+    }
+    triangle[triangleAmount + 1] = { glfx * cos(0.0f), glfy * sin(0.0f) };
+
+    float colors[triangleAmount + 2][4];
+
+    // расчет цвета
+    // нулевая точка - белая
     colors[0][0] = 1;
     colors[0][1] = 1;
     colors[0][2] = 1;
     colors[0][3] = 1;
 
     int k = 0;
+    double multFactor = 0.11111111111;
     for (int i = 0; i <= 8; i++)
     {
         colors[i + 1][0] = 1;
         colors[i + 1][1] = 0;
-        colors[i + 1][2] = (0.11111111111 * k);
+        colors[i + 1][2] = (multFactor * k);
         colors[i + 1][3] = 1;
         k++;
     }
@@ -190,7 +166,7 @@ void InitVBO()
     k = 0;
     for (int i =9; i <=17; i++) 
     {
-        colors[i + 1][0] = 1- (0.11111111111 * k);
+        colors[i + 1][0] = 1 - (multFactor * k);
         colors[i + 1][1] = 0;
         colors[i + 1][2] = 1;
         colors[i + 1][3] = 1;
@@ -201,7 +177,7 @@ void InitVBO()
     for (int i = 18; i <= 26; i++) 
     {
         colors[i + 1][0] = 0;
-        colors[i + 1][1] = (0.11111111111 * k);
+        colors[i + 1][1] = (multFactor * k);
         colors[i + 1][2] = 1;
         colors[i + 1][3] = 1;
         k++;
@@ -212,7 +188,7 @@ void InitVBO()
     {
         colors[i + 1][0] = 0;
         colors[i + 1][1] = 1;
-        colors[i + 1][2] = 1 - (0.11111111111 * k);
+        colors[i + 1][2] = 1 - (multFactor * k);
         colors[i + 1][3] = 1;
         k++;
     }
@@ -220,7 +196,7 @@ void InitVBO()
     k = 0;
     for (int i = 36; i <= 44; i++) 
     {
-        colors[i + 1][0] = (0.11111111111 * k);
+        colors[i + 1][0] = (multFactor * k);
         colors[i + 1][1] = 1;
         colors[i + 1][2] = 0;
         colors[i + 1][3] = 1;
@@ -231,7 +207,7 @@ void InitVBO()
     for (int i = 45; i <= 53; i++)
     {
         colors[i + 1][0] = 1;
-        colors[i + 1][1] = 1 - (0.11111111111 * k);
+        colors[i + 1][1] = 1 - (multFactor * k);
         colors[i + 1][2] = 0;
         colors[i + 1][3] = 1;
         k++;
@@ -250,33 +226,19 @@ void InitVBO()
 }
 
 
-/*
-Vertex tetrahedron[4] = {
-{{ -28.1908 / 55.f, 7.32734 / 55.f - 0.5f, -6.42109 / 55.f }, { green }},
-{{ -10.2606 / 55.f, 55.7862 / 55.f - 0.5f, 24.0789 / 55.f }, { blue }},
-{{ 28.1908 / 55.f, 10.8908 / 55.f - 0.5f, 13.7884 / 55.f }, { red }},
-{{ 10.2606 / 55.f, 45.9957 / 55.f - 0.5f, -31.4461 / 55.f }, { white }},
-};
-*/
-
-
 
 void InitShader()
 {
-    // Создаем вершинный шейдер
+    // вершинный шейдер
     GLuint vShader = glCreateShader(GL_VERTEX_SHADER);
-    // Передаем исходный код
     glShaderSource(vShader, 1, &VertexShaderSource, NULL);
-    // Компилируем шейдер
     glCompileShader(vShader);
     std::cout << "vertex shader \n";
     ShaderLog(vShader);
 
-    // Создаем фрагментный шейдер
+    // фрагментный шейдер
     GLuint fShader = glCreateShader(GL_FRAGMENT_SHADER);
-    // Передаем исходный код
     glShaderSource(fShader, 1, &FragShaderSource, NULL);
-    // Компилируем шейдер
     glCompileShader(fShader);
     std::cout << "fragment shader \n";
     ShaderLog(fShader);
@@ -288,7 +250,6 @@ void InitShader()
 
     // Линкуем шейдерную программу
     glLinkProgram(Program);
-    // Проверяем статус сборки
     int link_ok;
     glGetProgramiv(Program, GL_LINK_STATUS, &link_ok);
     if (!link_ok)
@@ -341,8 +302,7 @@ void Draw()
     // Отключаем VBO
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    // Передаем данные на видеокарту(рисуем)
-    glDrawArrays(GL_POLYGON, 0, 56);
+    glDrawArrays(GL_POLYGON, 0, triangleAmount + 2);
 
     // Отключаем массивы атрибутов
     glDisableVertexAttribArray(Attrib_vertex);
@@ -356,9 +316,7 @@ void Draw()
 // Освобождение шейдеров
 void ReleaseShader()
 {
-    // Передавая ноль, мы отключаем шейдрную программу
     glUseProgram(0);
-    // Удаляем шейдерную программу
     glDeleteProgram(Program);
 }
 
@@ -374,4 +332,31 @@ void Release()
 {
     ReleaseShader();
     ReleaseVBO();
+}
+
+void checkOpenGLerror()
+{
+    GLenum errCode;
+    if ((errCode = glGetError()) != GL_NO_ERROR)
+        std::cout << "OpenGl error!: " << errCode << std::endl;
+}
+
+void ShaderLog(unsigned int shader)
+{
+    int infologLen = 0;
+    int charsWritten = 0;
+    char* infoLog;
+    glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infologLen);
+    if (infologLen > 1)
+    {
+        infoLog = new char[infologLen];
+        if (infoLog == NULL)
+        {
+            std::cout << "ERROR: Could not allocate InfoLog buffer" << std::endl;
+            exit(1);
+        }
+        glGetShaderInfoLog(shader, infologLen, &charsWritten, infoLog);
+        std::cout << "InfoLog: " << infoLog << "\n\n\n";
+        delete[] infoLog;
+    }
 }
